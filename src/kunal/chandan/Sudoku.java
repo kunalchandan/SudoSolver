@@ -2,6 +2,8 @@ package kunal.chandan;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Sudoku {
     int[][] grid;
@@ -16,22 +18,24 @@ public class Sudoku {
 
     public void solve() throws InterruptedException {
         //TODO:: Solve the puzzle
-        //TODO:: Find Possibilities of each cell
+        //DID:: Find Possibilities of each cell
         //Narrow Possibilities by sector
         while(notSolved()) {
             findAllPoss();
-            //TODO:: If a cell has 1 possibility then place the number
-            while(stillHaveMoreOnes()) {
+            //DID:: If a cell has 1 possibility then place the number
+            while (stillHaveMoreOnes()) {
                 printGrid();
                 fillOnes();
                 findAllPoss();
-                Thread.sleep(10000);
+                Thread.sleep(5000);
             }
+            //TODO:: otherwise push to stack and explore possibilities
+
         }
-        //TODO:: otherwise push to stack and explore possibilities
+        printGrid();
     }
 
-    public boolean stillHaveMoreOnes(){
+    private boolean stillHaveMoreOnes(){
         for(int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
                 if(length(poss_grid[x][y])== 1){
@@ -42,7 +46,7 @@ public class Sudoku {
         return false;
     }
 
-    public boolean notSolved(){
+    private boolean notSolved(){
         for(int x = 0; x < 9; x++){
             for(int y = 0; y < 9; y++){
                 if(grid[x][y] == 0){
@@ -53,33 +57,30 @@ public class Sudoku {
         return false;
     }
 
-    public void fillOnes(){
+    private void fillOnes(){
+        //Fills cells that have only one possibility
         for (int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
-                if (length(poss_grid[x][y]) == 1) {
-                    grid[x][y] = poss_grid[x][y][poss_grid[x][y].length-1];
+                if ((length(poss_grid[x][y]) == 1) && (grid[x][y] == 0)) {
+                    grid[x][y] = poss_grid[x][y][8];
                     System.out.println(poss_grid[x][y][8] + " " + x + " " + y);
                 }
             }
         }
     }
 
-    public void findAllPoss(){
+    private void findAllPoss(){
         for(int x = 0; x < 9; x++){
             for(int y = 0; y < 9; y++) {
-                if(this.grid[x][y] == 0) {
-                    //DID:: find possibilities per sector
-                    if((x%3==0) && (y%3==0)){
-                        this.calcPossSect(x, y);
-                    }
-                    //TODO:: Find possibilities per row and coloumn
-                    this.calcPossGrid(x, y);
-                }
+                //DID:: find possibilities per sector
+                this.calcPossSect(x, y);
+                //DID:: Find possibilities per row and coloumn
+                this.calcPossGrid(x, y);
             }
         }
     }
 
-    public void calcPossGrid(int x, int y){
+    private void calcPossGrid(int x, int y){
         initPoss(poss_grid[x][y]);
         //Traverse coloumn
         for(int i = 0; i < 9; i++) {
@@ -93,20 +94,18 @@ public class Sudoku {
                 removeNum(poss_grid[x][y], this.grid[j][y]);
             }
         }
+        int sectX = x/3, sectY = y/3;
         //Traverse Possibilities per sector
-        for(int k = 0; k < 9; k++) {
-            if(this.poss_sect[x/3][y/3][k] != 0){
-                removeNum(poss_grid[x][y], this.poss_sect[x/3][y/3][k]);
-            }
-        }
+        //DID:: find intersection of poss_sect[sectX][sectY] and poss_grid[x][y]
+        poss_grid[x][y] = intersection(poss_grid[x][y], poss_sect[sectX][sectY]);
     }
 
-    public void calcPossSect(int x, int y){
+    private void calcPossSect(int x, int y){
         //Finds all possible numbers in a sector remaining and fills into the poss_sect[3][3][9] array
         int sectX = x/3, sectY = y/3;
         initPoss(poss_sect[sectX][sectY]);
-        for(int i = x; i < x+3; i++) {
-            for(int j = y; j < y+3; j++) {
+        for(int i = sectX*3; i < (sectX*3)+3; i++) {
+            for(int j = sectY*3; j < (sectY*3)+3; j++) {
                 if(this.grid[i][j] != 0) {
                     removeNum(poss_sect[sectX][sectY], this.grid[i][j]);
                 }
@@ -114,7 +113,20 @@ public class Sudoku {
         }
     }
 
-    public int length(int[] arr){
+    private int[] intersection(int[] a, int[] b){
+        HashSet<Integer> setA = new HashSet<Integer>(Arrays.asList(Arrays.stream(a).boxed().toArray(Integer[]::new)));
+        HashSet<Integer> setB = new HashSet<Integer>(Arrays.asList(Arrays.stream(b).boxed().toArray(Integer[]::new)));
+        setA.retainAll(setB);
+        Integer[] lel = setA.toArray(new Integer[setA.size()]);
+        a = new int[9];
+        for(int x = 0; x < lel.length; x++){
+            a[x] = lel[x];
+        }
+        Arrays.sort(a);
+        return a;
+    }
+
+    private int length(int[] arr){
         int count = 0;
         for(int x = 0; x < arr.length; x++){
             if(arr[x] != 0){
@@ -124,7 +136,7 @@ public class Sudoku {
         return count;
     }
 
-    public void printGrid(){
+    private void printGrid(){
         System.out.println();
         for(int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
@@ -134,27 +146,25 @@ public class Sudoku {
         }
     }
 
-    public void removeNum(int[] possi, int num){
-        //Removes number from list, and sorts.
-        //I realize that this causes all the zeros to fall to the bottom
-        //I will call that a feature
-        for(int x = 0; x < possi.length; x++){
-            if(possi[x] == num){
-                possi[x] = 0;
+    private void removeNum(int[] array, int num){
+        //DID:: Removes number from list, and sorts.
+        //I realize that this causes all the zeros to fall to the bottom, I will call that a feature
+        for(int x = 0; x < array.length; x++){
+            if(array[x] == num){
+                array[x] = 0;
             }
         }
-
-        Arrays.sort(possi);
+        Arrays.sort(array);
     }
 
-    public void initPoss(int[] possi){
+    private void initPoss(int[] possi){
         //Fills possibility array with 1-9
         for(int c = 0; c < possi.length; c++){
-            possi[c] = c;
+            possi[c] = c+1;
         }
     }
 
-    public void readGrid(String fileName) throws IOException {
+    protected void readGrid(String fileName) throws IOException {
         BufferedReader bf = new BufferedReader( new FileReader( new File(fileName)));
         for(int x = 0; x < 9; x++) {
             String[] s = bf.readLine().split(" ");
