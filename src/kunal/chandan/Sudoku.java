@@ -3,70 +3,129 @@ package kunal.chandan;
 import java.io.*;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Set;
 
 public class Sudoku {
-    int[][] grid;
-    int[][][] poss_sect;
-    int[][][] poss_grid;
+    private int[][] grid;
+    private int[][][] poss_sect;
+    private int[][][] poss_grid;
 
     public Sudoku(){
-        grid = new int[9][9];
+        this(new int[9][9]);
+    }
+
+    public Sudoku(int[][] grid){
+        this.grid = grid;
         poss_sect = new int[3][3][9];
         poss_grid = new int[9][9][9];
     }
 
-    public void solve() throws InterruptedException {
+    public long solve() throws InterruptedException{
         //TODO:: Solve the puzzle
         //DID:: Find Possibilities of each cell
-        //Narrow Possibilities by sector
-        while(notSolved()) {
+        //DID:: Narrow Possibilities by sector
+        long count = 0;
+        while(!solved()) {
             findAllPoss();
-            //DID:: If a cell has 1 possibility then place the number
-            while (stillHaveMoreOnes()) {
+            //DID:: If cells has 1 possibility then place the number
+            if(haveSingleOptions()) {
+                //Solve Sudoku using Rules
                 printGrid();
-                fillOnes();
-                findAllPoss();
-                Thread.sleep(5000);
+                count += fillOnes();
             }
-            //TODO:: otherwise push to stack and explore possibilities
+            else if(haveMoreOptions()){
+                //TODO:: otherwise push to stack and explore possibilities
 
+                //TODO:: Fill the cell with the fewest possibilities with one of its options and solve
+                //TODO:: Do that with all its options and add them up
+                //Get coordinate of cell with fewest options
+                int[] cord = getFewestOptions();
+                int x = cord[0], y = cord[1];
+                //for each of its options solve
+                for(int a = 9-length(poss_grid[x][y]); a < 9; a++){
+                    Sudoku sudoku = new Sudoku(grid);
+                    sudoku.grid[x][y] = poss_grid[x][y][a];
+
+                    //Thread.sleep(100);
+                    count += sudoku.solve();
+                    if(sudoku.solved()) {
+                        this.grid = sudoku.grid.clone();
+                        System.out.println("YEEET");
+                        return count;
+                    }
+                }
+            }
+            else if(noMoreOptions()){
+                //Zero options remaining implies solve failed, simply return number of attempts
+                return count;
+            }
         }
-        printGrid();
+        return count;
     }
 
-    private boolean stillHaveMoreOnes(){
+    private boolean noMoreOptions(){
+        return !haveMoreOptions();
+    }
+
+    private boolean haveMoreOptions(){
+        for(int x = 0; x < 9; x++){
+            for(int y = 0; y < 9; y++){
+                if(length(poss_grid[x][y]) > 1){
+                    return true;
+                }
+            }
+        }return false;
+    }
+
+    private int[] getFewestOptions(){
+        int[] cord = {0,0};
+        for(int x = 0; x < 9; x++){
+            for(int y = 0; y < 9; y++){
+                if((length(poss_grid[cord[0]][cord[1]]) > length(poss_grid[x][y])) && (length(poss_grid[x][y]) > 0)){
+                    cord[0] = x;
+                    cord[1] = y;
+                }
+            }
+        }
+        return cord;
+     }
+
+    private boolean haveSingleOptions(){
         for(int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
-                if(length(poss_grid[x][y])== 1){
+                if(length(poss_grid[x][y]) == 1){
                     return true;
+                }else if (length(poss_grid[x][y]) > 1){
+                    return false;
                 }
             }
         }
         return false;
     }
 
-    private boolean notSolved(){
+    private boolean solved(){
         for(int x = 0; x < 9; x++){
             for(int y = 0; y < 9; y++){
                 if(grid[x][y] == 0){
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
-    private void fillOnes(){
+    private int fillOnes(){
+        //Returns number of cells filled in function call
         //Fills cells that have only one possibility
+        int count = 0;
         for (int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
                 if ((length(poss_grid[x][y]) == 1) && (grid[x][y] == 0)) {
                     grid[x][y] = poss_grid[x][y][8];
-                    System.out.println(poss_grid[x][y][8] + " " + x + " " + y);
+                    count++;
                 }
             }
         }
+        return count;
     }
 
     private void findAllPoss(){
@@ -130,13 +189,13 @@ public class Sudoku {
         int count = 0;
         for(int x = 0; x < arr.length; x++){
             if(arr[x] != 0){
-                count ++;
+                count++;
             }
         }
         return count;
     }
 
-    private void printGrid(){
+    public void printGrid(){
         System.out.println();
         for(int x = 0; x < 9; x++) {
             for (int y = 0; y < 9; y++) {
@@ -157,14 +216,14 @@ public class Sudoku {
         Arrays.sort(array);
     }
 
-    private void initPoss(int[] possi){
+    private void initPoss(int[] poss){
         //Fills possibility array with 1-9
-        for(int c = 0; c < possi.length; c++){
-            possi[c] = c+1;
+        for(int c = 0; c < poss.length; c++){
+            poss[c] = c+1;
         }
     }
 
-    protected void readGrid(String fileName) throws IOException {
+    public void readGrid(String fileName) throws IOException {
         BufferedReader bf = new BufferedReader( new FileReader( new File(fileName)));
         for(int x = 0; x < 9; x++) {
             String[] s = bf.readLine().split(" ");
